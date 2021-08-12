@@ -527,7 +527,8 @@ struct job *find_job(const char *job_id)
 
 sds get_real_coinbase1(struct job *job, char *user, uint32_t worker_id, uint32_t nonce_id)
 {
-    size_t left_size = 100 - 5 - 1 - 17;
+    int extra_nonce_size = get_extra_nonce_size();
+    size_t left_size = 100 - 5 - 1 - (1 + 4 + 4 + extra_nonce_size);
     if (sdslen(job->coinbaseaux_bin)) {
         left_size -= (1 + sdslen(job->coinbaseaux_bin));
     }
@@ -568,12 +569,11 @@ sds get_real_coinbase1(struct job *job, char *user, uint32_t worker_id, uint32_t
     if (sdslen(job->coinbaseaux_bin)) {
         pack_oppush(&p, &left, job->coinbaseaux_bin, sdslen(job->coinbaseaux_bin)); // coinbaseaux
     }
-    pack_char(&p, &left, 16);
+    pack_char(&p, &left, (4 + 4 + extra_nonce_size));
     uint32_t id = (worker_id << 16) + job->job_id_num;
     pack_uint32_le(&p, &left, id);
     pack_uint32_le(&p, &left, nonce_id);
 
-    int extra_nonce_size = get_extra_nonce_size();
     uint32_t script_real_size = sizeof(script) - left + extra_nonce_size;
 
     char coinbase1[1024];
@@ -588,7 +588,8 @@ sds get_real_coinbase1(struct job *job, char *user, uint32_t worker_id, uint32_t
 
 sds get_real_coinbase1_ext(struct job *job, char *user, uint32_t agent_id, uint32_t nonce_id)
 {
-    size_t left_size = 100 - 5 - 1 - 19;
+    int extra_nonce_size = get_extra_nonce_size();
+    size_t left_size = 100 - 5 - 1 - (1 + 2 + 4 + 4 + extra_nonce_size);
     if (sdslen(job->coinbaseaux_bin)) {
         left_size -= (1 + sdslen(job->coinbaseaux_bin));
     }
@@ -605,7 +606,7 @@ sds get_real_coinbase1_ext(struct job *job, char *user, uint32_t agent_id, uint3
         msg = sdscat(msg, job->coinbase_message);
         msg = sdscat(msg, "/");
         left_size -= (sdslen(job->coinbase_message) + 1);
-    }    
+    }
     if (job->coinbase_account) {
         sds userinfo = sdsempty();
         userinfo = sdscatprintf(userinfo, "Mined by %s", user);
@@ -628,12 +629,11 @@ sds get_real_coinbase1_ext(struct job *job, char *user, uint32_t agent_id, uint3
     if (sdslen(job->coinbaseaux_bin)) {
         pack_oppush(&p, &left, job->coinbaseaux_bin, sdslen(job->coinbaseaux_bin)); // coinbaseaux
     }
-    pack_char(&p, &left, 18);
+    pack_char(&p, &left, (2 + 4 + 4 + extra_nonce_size));
     pack_uint16_le(&p, &left, job->job_id_num);
     pack_uint32_le(&p, &left, agent_id);
     pack_uint32_le(&p, &left, nonce_id);
 
-    int extra_nonce_size = get_extra_nonce_size();
     uint32_t script_real_size = sizeof(script) - left + extra_nonce_size;
 
     char coinbase1[1024];
