@@ -1266,6 +1266,14 @@ int on_height_update(int height, uint32_t curtime, uint32_t nbits, const char *t
     if (outer.height < height && height == (main_coin_height + 1)) {
         if (curr_job == NULL)
             return -__LINE__;
+        if ((height + 1) % 2016 == 0) {
+            log_info("if next height (%d) require change nbits, skip empty job from outer.", (height + 1));
+            return -__LINE__;
+        }
+        if (nbits != curr_job->nbits) {
+            log_info("if outer's nbits(%#x) is not equal to curr_job's nbits(%#x), skip empty job from outer.", nbits, curr_job->nbits);
+            return -__LINE__;
+        }
         outer.height = height;
         outer.version = curr_job->version;
         outer.curtime = curtime;

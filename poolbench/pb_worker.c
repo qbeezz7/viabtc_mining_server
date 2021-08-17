@@ -140,12 +140,13 @@ static void on_connect(nw_ses *ses, bool result)
     }
 }
 
-static int send_block_nitify(sds hash, int height, uint32_t curtime)
+static int send_block_notify(sds hash, int height, uint32_t curtime, uint32_t nbits)
 {
     json_t *message = json_object();
     json_object_set_new(message, "height", json_integer(height));
     json_object_set_new(message, "curtime", json_integer(curtime));
     json_object_set_new(message, "prevhash", json_string(hash));
+    json_object_set_new(message, "nbits", json_integer(nbits));
 
     char *message_data = json_dumps(message, 0);
     if (message_data == NULL) {
@@ -238,6 +239,9 @@ int handle_mining_notify(struct worker_info *info, json_t *request)
         json_t *prevhash = json_array_get(params, 1);
         if (!prevhash || !json_is_string(prevhash))
             return -__LINE__;
+        json_t *nbits = json_array_get(params, 6);
+        if (!nbits || !json_is_string(nbits))
+            return -__LINE__;
         json_t *curtime = json_array_get(params, 7);
         if (!curtime || !json_is_string(curtime))
             return -__LINE__;
@@ -260,10 +264,12 @@ int handle_mining_notify(struct worker_info *info, json_t *request)
         if (curtime_val < now) {
             curtime_val = now;
         }
-        log_info("notify: height: %d, hash: %s, time: %u", (int)height - 1, prevhash_hex, curtime_val);
-        int ret = send_block_nitify(prevhash_hex, height - 1, curtime_val);
+
+        uint32_t nbits_val = strtoul(json_string_value(nbits), NULL, 16);
+        log_info("notify: height: %d, hash: %s, time: %u, nbits: %u", (int)height - 1, prevhash_hex, curtime_val, nbits_val);
+        int ret = send_block_notify(prevhash_hex, height - 1, curtime_val, nbits_val);
         if (ret < 0) {
-            log_error("send_block_nitify fail: %d", ret);
+            log_error("send_block_notify fail: %d", ret);
             sdsfree(prevhash_hex);
             return -__LINE__;
         }

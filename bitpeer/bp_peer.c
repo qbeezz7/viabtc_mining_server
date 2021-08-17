@@ -280,12 +280,13 @@ static int send_block(nw_ses *ses, void *block, size_t size)
     return send_p2pmsg(ses, "block", block, size);
 }
 
-static int send_block_nitify(sds hash, int height, uint32_t curtime)
+static int send_block_notify(sds hash, int height, uint32_t curtime, uint32_t nbits)
 {
     json_t *message = json_object();
     json_object_set_new(message, "height", json_integer(height));
     json_object_set_new(message, "curtime", json_integer(curtime));
     json_object_set_new(message, "prevhash", json_string(hash));
+    json_object_set_new(message, "nbits", json_integer(nbits));
 
     char *message_data = json_dumps(message, 0);
     if (message_data == NULL) {
@@ -404,9 +405,10 @@ static int process_headers(nw_ses *ses, void *msg, size_t size)
                 if (curtime <= block_time) {
                     curtime = block_time + 1;
                 }
-                int ret = send_block_nitify(hex, height, curtime);
+                uint32_t block_nbits = le32toh(*(uint32_t *)(msg + 72));
+                int ret = send_block_notify(hex, height, curtime, block_nbits);
                 if (ret < 0) {
-                    log_error("send_block_nitify fail: %d", ret);
+                    log_error("send_block_notify fail: %d", ret);
                     sdsfree(hex);
                     return -__LINE__;
                 }
@@ -561,9 +563,10 @@ static int process_block(nw_ses *ses, void *msg, size_t size)
         if (curtime <= block_time) {
             curtime = block_time + 1;
         }
-        int ret = send_block_nitify(hex, best_height, curtime);
+        uint32_t block_nbits = le32toh(*(uint32_t *)(msg + 72));
+        int ret = send_block_notify(hex, best_height, curtime, block_nbits);
         if (ret < 0) {
-            log_error("send_block_nitify fail: %d", ret);
+            log_error("send_block_notify fail: %d", ret);
             sdsfree(hex);
             return -__LINE__;
         }
