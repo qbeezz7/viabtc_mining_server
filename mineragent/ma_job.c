@@ -571,7 +571,8 @@ struct job *find_job(const char *job_id)
 
 sds get_real_coinbase1(struct job *job, char *user, uint32_t nonce_id)
 {
-    size_t left_size = 100 - 5 - 1 - 19;
+    int extra_nonce_size = get_extra_nonce_size();
+    size_t left_size = 100 - 5 - 1 - (1 + 2 + 4 + 4 + extra_nonce_size);
     if (sdslen(job->coinbaseaux_bin)) {
         left_size -= (1 + sdslen(job->coinbaseaux_bin));
     }
@@ -611,12 +612,11 @@ sds get_real_coinbase1(struct job *job, char *user, uint32_t nonce_id)
     if (sdslen(job->coinbaseaux_bin)) {
         pack_oppush(&p, &left, job->coinbaseaux_bin, sdslen(job->coinbaseaux_bin)); // coinbaseaux
     }
-    pack_char(&p, &left, 18);
+    pack_char(&p, &left, (2 + 4 + 4 + extra_nonce_size));
     pack_uint16_le(&p, &left, job->job_id_num);
     pack_uint32_le(&p, &left, worker_id);
     pack_uint32_le(&p, &left, nonce_id);
 
-    int extra_nonce_size = get_extra_nonce_size();
     uint32_t script_real_size = sizeof(script) - left + extra_nonce_size;
 
     char coinbase1[1024];
